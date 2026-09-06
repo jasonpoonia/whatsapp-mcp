@@ -169,6 +169,16 @@ def create_group(name: str, participants: List[str]) -> Dict[str, Any]:
     return whatsapp_create_group(name, participants)
 
 @mcp.tool()
+def leave_group(jid: str) -> Dict[str, Any]:
+    """Leave (and effectively remove) a WhatsApp group. Only use when Jason has named the specific group.
+
+    Args:
+        jid: Group JID ending in @g.us
+    """
+    from whatsapp import leave_group as whatsapp_leave_group
+    return whatsapp_leave_group(jid)
+
+@mcp.tool()
 def send_message(
     recipient: str,
     message: str

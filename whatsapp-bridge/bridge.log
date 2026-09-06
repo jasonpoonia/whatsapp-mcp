@@ -46282,3 +46282,13 @@ Disconnecting...
 ✓ Connected to WhatsApp! Type 'help' for commands.
 Starting REST API server on :8082...
 REST server is running. Press Ctrl+C to disconnect and exit.
+Disconnecting...
+22:50:31.265[33m [Client/Socket WARN] Error sending close to websocket: failed to close WebSocket: failed to read frame header: EOF[0m
+22:50:41.440[36m [Client INFO] Starting WhatsApp client...[0m
+22:50:42.155[36m [Client INFO] Successfully authenticated[0m
+22:50:42.557[36m [Client INFO] Connected to WhatsApp[0m
+
+✓ Connected to WhatsApp! Type 'help' for commands.
+Starting REST API server on :8082...
+REST server is running. Press Ctrl+C to disconnect and exit.
+22:51:09.524[36m [Client INFO] Using existing chat name for 1881631916287@lid: 1881631916287[0m

@@ -770,6 +770,33 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "jid": info.JID.String(), "name": info.Name, "participants": members})
 	})
 
+	// Handler for leaving a group
+	http.HandleFunc("/api/leave_group", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req struct {
+			JID string `json:"jid"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.JID == "" {
+			http.Error(w, "jid is required", http.StatusBadRequest)
+			return
+		}
+		jid, err := types.ParseJID(req.JID)
+		if err != nil {
+			http.Error(w, "bad jid: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := client.LeaveGroup(context.Background(), jid); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "message": err.Error()})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "left " + jid.String()})
+	})
+
 	// Handler for downloading media
 	http.HandleFunc("/api/download", func(w http.ResponseWriter, r *http.Request) {
 		// Only allow POST requests

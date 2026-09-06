@@ -775,3 +775,13 @@ def create_group(name: str, participants: List[str]) -> Dict[str, Any]:
         return {"success": False, "message": f"Error: HTTP {response.status_code} - {response.text}"}
     except requests.RequestException as e:
         return {"success": False, "message": f"Request error: {str(e)}"}
+
+
+def leave_group(jid: str) -> Dict[str, Any]:
+    try:
+        response = requests.post(f"{WHATSAPP_API_BASE_URL}/leave_group", json={"jid": jid})
+        if response.status_code == 200:
+            return response.json()
+        return {"success": False, "message": f"Error: HTTP {response.status_code} - {response.text}"}
+    except requests.RequestException as e:
+        return {"success": False, "message": f"Request error: {str(e)}"}
