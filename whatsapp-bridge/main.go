@@ -797,6 +797,126 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "left " + jid.String()})
 	})
 
+	// Group info
+	http.HandleFunc("/api/group_info", func(w http.ResponseWriter, r *http.Request) {
+		var req struct{ JID string `json:"jid"` }
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.JID == "" {
+			http.Error(w, "jid is required", http.StatusBadRequest)
+			return
+		}
+		jid, err := types.ParseJID(req.JID)
+		if err != nil {
+			http.Error(w, "bad jid", http.StatusBadRequest)
+			return
+		}
+		info, err := client.GetGroupInfo(context.Background(), jid)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "message": err.Error()})
+			return
+		}
+		members := []map[string]interface{}{}
+		for _, m := range info.Participants {
+			members = append(members, map[string]interface{}{"jid": m.JID.String(), "phone": m.PhoneNumber.String(), "lid": m.LID.String(), "admin": m.IsAdmin || m.IsSuperAdmin})
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "jid": info.JID.String(), "name": info.Name, "participants": members})
+	})
+
+	// Add participants
+	http.HandleFunc("/api/add_participants", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			JID          string   `json:"jid"`
+			Participants []string `json:"participants"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.JID == "" || len(req.Participants) == 0 {
+			http.Error(w, "jid and participants are required", http.StatusBadRequest)
+			return
+		}
+		jid, err := types.ParseJID(req.JID)
+		if err != nil {
+			http.Error(w, "bad jid", http.StatusBadRequest)
+			return
+		}
+		var jids []types.JID
+		for _, p := range req.Participants {
+			p = strings.TrimPrefix(strings.TrimSpace(p), "+")
+			if !strings.Contains(p, "@") {
+				p = p + "@s.whatsapp.net"
+			}
+			pj, err := types.ParseJID(p)
+			if err != nil {
+				http.Error(w, "bad participant "+p, http.StatusBadRequest)
+				return
+			}
+			jids = append(jids, pj)
+		}
+		res, err := client.UpdateGroupParticipants(context.Background(), jid, jids, whatsmeow.ParticipantChangeAdd)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "message": err.Error()})
+			return
+		}
+		out := []map[string]interface{}{}
+		for _, r := range res {
+			out = append(out, map[string]interface{}{"jid": r.JID.String(), "error": r.Error})
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "results": out})
+	})
+
+	// Invite link
+	http.HandleFunc("/api/invite_link", func(w http.ResponseWriter, r *http.Request) {
+		var req struct{ JID string `json:"jid"` }
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.JID == "" {
+			http.Error(w, "jid is required", http.StatusBadRequest)
+			return
+		}
+		jid, err := types.ParseJID(req.JID)
+		if err != nil {
+			http.Error(w, "bad jid", http.StatusBadRequest)
+			return
+		}
+		link, err := client.GetGroupInviteLink(context.Background(), jid, false)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "message": err.Error()})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "link": link})
+	})
+
+	// Group photo (JPEG path)
+	http.HandleFunc("/api/set_group_photo", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			JID  string `json:"jid"`
+			Path string `json:"path"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.JID == "" || req.Path == "" {
+			http.Error(w, "jid and path are required", http.StatusBadRequest)
+			return
+		}
+		jid, err := types.ParseJID(req.JID)
+		if err != nil {
+			http.Error(w, "bad jid", http.StatusBadRequest)
+			return
+		}
+		data, err := os.ReadFile(req.Path)
+		if err != nil {
+			http.Error(w, "cannot read file: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		id, err := client.SetGroupPhoto(context.Background(), jid, data)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "message": err.Error()})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "picture_id": id})
+	})
+
 	// Handler for downloading media
 	http.HandleFunc("/api/download", func(w http.ResponseWriter, r *http.Request) {
 		// Only allow POST requests
