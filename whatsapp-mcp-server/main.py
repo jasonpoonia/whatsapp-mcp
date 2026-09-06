@@ -155,6 +155,20 @@ def get_message_context(
     return context
 
 @mcp.tool()
+def create_group(name: str, participants: List[str]) -> Dict[str, Any]:
+    """Create a new WhatsApp group with Jason as admin. Only use when Jason has asked for a specific group.
+
+    Args:
+        name: Group name (max 25 characters)
+        participants: Phone numbers with country code, no + (e.g. "6421xxxxxxx"), or JIDs. Jason is added automatically.
+
+    Returns:
+        success flag, the new group JID (use it as recipient for send_message), and the member list
+    """
+    from whatsapp import create_group as whatsapp_create_group
+    return whatsapp_create_group(name, participants)
+
+@mcp.tool()
 def send_message(
     recipient: str,
     message: str

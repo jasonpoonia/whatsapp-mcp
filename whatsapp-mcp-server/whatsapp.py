@@ -1,14 +1,14 @@
 import sqlite3
 from datetime import datetime
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict, Any
 import os.path
 import requests
 import json
 import audio
 
 MESSAGES_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'whatsapp-bridge', 'store', 'messages.db')
-WHATSAPP_API_BASE_URL = "http://localhost:8080/api"
+WHATSAPP_API_BASE_URL = "http://localhost:8082/api"
 
 @dataclass
 class Message:
@@ -765,3 +765,13 @@ def download_media(message_id: str, chat_jid: str) -> Optional[str]:
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return None
+
+
+def create_group(name: str, participants: List[str]) -> Dict[str, Any]:
+    try:
+        response = requests.post(f"{WHATSAPP_API_BASE_URL}/create_group", json={"name": name, "participants": participants})
+        if response.status_code == 200:
+            return response.json()
+        return {"success": False, "message": f"Error: HTTP {response.status_code} - {response.text}"}
+    except requests.RequestException as e:
+        return {"success": False, "message": f"Request error: {str(e)}"}
